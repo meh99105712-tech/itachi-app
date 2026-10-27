@@ -11,6 +11,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -24,7 +26,7 @@ jobs:
         run: |
           mkdir app && cd app
           npm init -y
-          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/status-bar@6
+          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
           mkdir www
           echo '<html><body style="background:#07060b"></body></html>' > www/index.html
           cat > capacitor.config.json <<'EOF'
@@ -37,11 +39,8 @@ jobs:
               "url": "http://144.217.64.5:5424/hub.html",
               "cleartext": true
             },
-            "plugins": {
-              "StatusBar": {
-                "style": "DARK",
-                "backgroundColor": "#07060b"
-              }
+            "android": {
+              "allowMixedContent": true
             }
           }
           EOF
@@ -51,7 +50,7 @@ jobs:
         run: |
           cd app
           IM=$(command -v magick || command -v convert)
-          curl -fL --retry 3 -A "Mozilla/5.0" -o icon_src https://upload.satoru.click/files/25030c.jpg
+          if [ -f ../icon.png ]; then cp ../icon.png icon_src; else curl -fL --retry 3 -A "Mozilla/5.0" -o icon_src https://upload.satoru.click/files/25030c.jpg; fi
           $IM "icon_src[0]" -resize 1024x1024^ -gravity center -extent 1024x1024 icon.png
           RES=android/app/src/main/res
           find $RES -name 'ic_launcher*.webp' -delete
@@ -62,12 +61,12 @@ jobs:
             cp $RES/mipmap-$n/ic_launcher.png $RES/mipmap-$n/ic_launcher_round.png
           done
           for d in mdpi:108 hdpi:162 xhdpi:216 xxhdpi:324 xxxhdpi:432; do
-            n=${d%%:*}; s=${d##*:}; i=$((s*70/100))
+            n=${d%%:*}; s=${d##*:}; i=$((s*88/100))
             $IM icon.png -resize ${i}x${i} -background none -gravity center -extent ${s}x${s} $RES/mipmap-$n/ic_launcher_foreground.png
           done
           mkdir -p $RES/values
           printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#07060B</color>\n</resources>\n' > $RES/values/ic_launcher_background.xml
-          $IM icon.png -resize 240x240 logo.png
+          $IM icon.png -resize 260x260 logo.png
           for f in $(find $RES -name 'splash*.png'); do
             sz=$(identify -format "%wx%h" "$f")
             $IM -size $sz xc:'#07060B' logo.png -gravity center -composite "$f"
